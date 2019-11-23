@@ -68,7 +68,7 @@ function cOperator( byval is_overload as integer ) as integer
 	     FB_TK_ATN, FB_TK_SQR, FB_TK_LEN, _
 	     FB_TK_ADDROFCHAR, FB_TK_FIELDDEREF, CHAR_LBRACKET, _
 	     FB_TK_NEW, FB_TK_DELETE, _
-	     FB_TK_FOR, FB_TK_STEP, FB_TK_NEXT
+	     FB_TK_FOR, FB_TK_STEP, FB_TK_NEXT, FB_TK_MID 'jk-mid
 
 		if( is_overload = FALSE ) then
 			exit function
@@ -100,6 +100,7 @@ function cOperator( byval is_overload as integer ) as integer
 		case FB_TK_TAN  : op = AST_OP_TAN
 		case FB_TK_ATN  : op = AST_OP_ATAN
 		case FB_TK_SQR  : op = AST_OP_SQRT
+		case FB_TK_MID  : op = AST_OP_MID             'jk-mid
 		case FB_TK_LEN  : op = AST_OP_LEN
 		case FB_TK_ADDROFCHAR : op = AST_OP_ADDROF
 		case FB_TK_FIELDDEREF : op = AST_OP_FLDDEREF

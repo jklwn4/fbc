@@ -2049,6 +2049,18 @@
 				( typeSetIsConst( FB_DATATYPE_DOUBLE ), FB_PARAMMODE_BYVAL, FALSE ) _
 	 		} _
 	 	), _
+        /' function fb_hStrCopy( byref dst as any, byref src as any, byval len as const integer) as any '/ _
+        ( _
+            @"fb_hStrCopy", NULL, _
+            FB_DATATYPE_VOID, FB_FUNCMODE_FBCALL, _
+            NULL, FB_RTL_OPT_NONE, _
+            3, _
+            { _
+                ( FB_DATATYPE_VOID, FB_PARAMMODE_BYREF, FALSE ), _
+                ( FB_DATATYPE_VOID, FB_PARAMMODE_BYREF, FALSE ), _
+                ( typeSetIsConst( FB_DATATYPE_INTEGER ), FB_PARAMMODE_BYVAL, FALSE ) _
+            } _
+        ), _         
 	 	/' EOL '/ _
 	 	( _
 	 		NULL _
@@ -3088,6 +3100,71 @@ function rtlStrToVal _
 
 end function
 
+
+'***********************************************************************************************
+private function hUdtCallOpOvl2 _
+    ( _
+        byval op as AST_OP, _
+        byval inst_expr as ASTNODE ptr, _
+        byval second_arg as ASTNODE ptr, _
+        byval third_arg as ASTNODE ptr, _
+        byval fourth_arg as ASTNODE ptr _
+    ) as ASTNODE ptr
+
+    dim as FBSYMBOL ptr sym = any
+
+    '' check if op was overloaded
+    sym = symbGetCompOpOvlHead( 0, op )
+
+    if( sym = NULL ) then
+        return NULL                                   'no overloaded operator available
+    end if
+
+    '' check for overloaded versions (note: don't pass the instance ptr - no self ops)
+    dim as FB_ERRMSG err_num = any
+    if( second_arg = NULL ) then
+        sym = symbFindClosestOvlProc( sym, 0, NULL, @err_num )
+    else
+        dim as FB_CALL_ARG args(0 to 2) = any
+        dim as integer params = 1
+        with args(0)
+            .expr = second_arg
+            .mode = INVALID
+            .next = NULL
+        end with
+
+        if( third_arg <> NULL ) then
+            args(0).next = @args(1)
+            params += 1
+            with args(1)
+                .expr = third_arg
+                .mode = INVALID
+                .next = NULL
+            end with
+        end if
+
+        if( fourth_arg <> NULL ) then
+            args(1).next = @args(2)
+            params += 1
+            with args(2)
+                .expr = fourth_arg
+                .mode = INVALID
+                .next = NULL
+            end with
+        end if
+
+        sym = symbFindClosestOvlProc( sym, params, @args(0), @err_num )
+    end if
+
+    if( sym = NULL ) then
+        return NULL                                   'no matching overloaded operator
+    end if
+
+    function = astBuildCall( sym, inst_expr, second_arg, third_arg )
+end function
+'***********************************************************************************************
+
+
 '':::::
 function rtlStrMid _
 	( _
@@ -3099,6 +3176,18 @@ function rtlStrMid _
     dim as ASTNODE ptr proc = any
 
     function = NULL
+
+
+'***********************************************************************************************
+    if( astGetDataType( expr1 ) = FB_DATATYPE_STRUCT ) then
+        proc = hUdtCallOpOvl2(AST_OP_MID, expr1, expr2, expr3, 0)
+
+       if (proc <> NULL) then
+          return proc
+        end if
+    end if
+'***********************************************************************************************
+
 
 	astTryOvlStringCONV( expr1 )
 

@@ -619,6 +619,13 @@ private function hCheckOpOvlParams _
 		min_params = iif( astGetOpIsSelf( op ), 0, 1 )
 		max_params = min_params
 
+'***********************************************************************************************
+        select case op                                'jk-mid
+          case AST_OP_MID
+            max_params = 4                            'allow for more paramteres in this case
+        end select    
+'***********************************************************************************************
+
 	case AST_NODECLASS_CONV
 		min_params = 0
 		max_params = min_params
@@ -650,6 +657,7 @@ private function hCheckOpOvlParams _
 
 	dim as integer params = symbGetProcParams( proc )
 	dim as integer real_params = params - iif( is_method, 1, 0 )
+
 	if( (real_params < min_params) or (real_params > max_params) ) then
 		errReport( FB_ERRMSG_ARGCNTMISMATCH, TRUE )
 	   	exit function
