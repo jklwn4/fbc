@@ -452,6 +452,7 @@ function cCatExpression _
     	end if
 
     	'' concatenate
+ods("& concat")
     	catexpr = astNewBOP( AST_OP_CONCAT, catexpr, expr )
 
         if( catexpr = NULL ) then

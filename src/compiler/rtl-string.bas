@@ -3102,6 +3102,63 @@ end function
 
 
 '***********************************************************************************************
+function astBuildCall2 _
+	( _
+		byval proc as FBSYMBOL ptr, _
+		byval arg1 as ASTNODE ptr, _
+		byval arg2 as ASTNODE ptr, _
+		byval arg3 as ASTNODE ptr, _
+		byval arg4 as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr p = any, ptrexpr = any
+
+	'' astBuildCall() is used to call operator overloads - they can be
+	'' virtual methods, at least for self-ops.
+	if( symbIsVirtual( proc ) ) then
+		'' The first arg should be the THIS ptr
+		assert( symbIsMethod( proc ) )
+		assert( astGetDataType( arg1 ) = FB_DATATYPE_STRUCT )
+		assert( astGetSubtype( arg1 ) = symbGetNamespace( proc ) )
+
+		ptrexpr = astBuildVtableLookup( proc, arg1 )
+	else
+		ptrexpr = NULL
+	end if
+
+	p = astNewCALL( proc, ptrexpr )
+
+	if( arg1 ) then
+		if( astNewARG( p, arg1 ) = NULL ) then
+			return NULL
+		end if
+	end if
+
+	if( arg2 ) then
+		if( astNewARG( p, arg2 ) = NULL ) then
+			return NULL
+		end if
+	end if
+
+	if( arg3 ) then
+		if( astNewARG( p, arg3 ) = NULL ) then
+			return NULL
+		end if
+	end if
+
+	if( arg4 ) then
+		if( astNewARG( p, arg4 ) = NULL ) then
+			return NULL
+		end if
+	end if
+
+	'' Take care of functions returning BYREF
+	p = astBuildByrefResultDeref( p )
+
+	function = p
+end function
+
+
 private function hUdtCallOpOvl2 _
     ( _
         byval op as AST_OP, _
@@ -3160,7 +3217,7 @@ private function hUdtCallOpOvl2 _
         return NULL                                   'no matching overloaded operator
     end if
 
-    function = astBuildCall( sym, inst_expr, second_arg, third_arg )
+    function = astBuildCall2( sym, inst_expr, second_arg, third_arg, fourth_arg )
 end function
 '***********************************************************************************************
 
@@ -3227,6 +3284,16 @@ function rtlStrAssignMid _
 	dim as longint dst_len = any
 
     function = NULL
+
+'***********************************************************************************************
+    if( astGetDataType( expr1 ) = FB_DATATYPE_STRUCT ) then
+        proc = hUdtCallOpOvl2(AST_OP_MID, expr1, expr2, expr3, expr4)
+
+       if (proc <> NULL) then
+          return proc
+        end if
+    end if
+'***********************************************************************************************
 
 	astTryOvlStringCONV( expr1 )
 
