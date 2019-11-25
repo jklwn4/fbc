@@ -3176,24 +3176,65 @@ private function hUdtCallOpOvl2 _
     if( sym = NULL ) then
         return NULL                                   'no overloaded operator available
     end if
-
+'ods("found sym")
     '' check for overloaded versions (note: don't pass the instance ptr - no self ops)
     dim as FB_ERRMSG err_num = any
     if( second_arg = NULL ) then
         sym = symbFindClosestOvlProc( sym, 0, NULL, @err_num )
     else
-        dim as FB_CALL_ARG args(0 to 2) = any
+'ods("> 1 arg")
+        dim as FB_CALL_ARG args(0 to 3) = any
         dim as integer params = 1
+'        with args(0)
+'            .expr = second_arg
+'            .mode = INVALID
+'            .next = NULL
+'        end with
+'
+'        if( third_arg <> NULL ) then
+'ods("third arg")
+'            args(0).next = @args(1)
+'            params += 1
+'            with args(1)
+'                .expr = third_arg
+'                .mode = INVALID
+'                .next = NULL
+'            end with
+'        end if
+'
+'        if( fourth_arg <> NULL ) then
+'ods("fourth arg")
+'            args(1).next = @args(2)
+'            params += 1
+'            with args(2)
+'                .expr = fourth_arg
+'                .mode = INVALID
+'                .next = NULL
+'            end with
+'        end if
+
         with args(0)
-            .expr = second_arg
+            .expr = inst_expr
             .mode = INVALID
             .next = NULL
         end with
 
-        if( third_arg <> NULL ) then
+        if( second_arg <> NULL ) then
+'ods("second arg")
             args(0).next = @args(1)
             params += 1
             with args(1)
+                .expr = second_arg
+                .mode = INVALID
+                .next = NULL
+            end with
+        end if
+
+        if( third_arg <> NULL ) then
+'ods("third arg")
+            args(1).next = @args(2)
+            params += 1
+            with args(2)
                 .expr = third_arg
                 .mode = INVALID
                 .next = NULL
@@ -3201,19 +3242,24 @@ private function hUdtCallOpOvl2 _
         end if
 
         if( fourth_arg <> NULL ) then
-            args(1).next = @args(2)
+'ods("fourth arg")
+            args(2).next = @args(3)
             params += 1
-            with args(2)
+            with args(3)
                 .expr = fourth_arg
                 .mode = INVALID
                 .next = NULL
             end with
         end if
 
+
+
+
         sym = symbFindClosestOvlProc( sym, params, @args(0), @err_num )
     end if
 
     if( sym = NULL ) then
+'ods("not found")
         return NULL                                   'no matching overloaded operator
     end if
 
@@ -3285,11 +3331,17 @@ function rtlStrAssignMid _
 
     function = NULL
 
+
+
+'ods("rtlStrAssignMid")
 '***********************************************************************************************
     if( astGetDataType( expr1 ) = FB_DATATYPE_STRUCT ) then
+'ods("check")
         proc = hUdtCallOpOvl2(AST_OP_MID, expr1, expr2, expr3, expr4)
 
        if (proc <> NULL) then
+          astAdd( proc )
+'ods("proc")
           return proc
         end if
     end if

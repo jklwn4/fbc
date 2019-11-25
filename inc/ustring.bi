@@ -41,11 +41,6 @@ NAMESPACE FB_USTRING
 ''***********************************************************************************************
 '' DWSTR CLASS
 ''***********************************************************************************************
-'type init_size
-'  n as long                                           ''<0, don´t construct, >= 0, init u_size = n
-'end type
-
-
 TYPE DWSTR extends wstring
   Public:
     u_data AS UBYTE PTR                               ''pointer to the buffer
@@ -56,10 +51,7 @@ TYPE DWSTR extends wstring
     DECLARE CONSTRUCTOR (BYVAL pwszStr AS WSTRING PTR)
     DECLARE CONSTRUCTOR (BYREF ansiStr AS STRING)
     DECLARE CONSTRUCTOR (BYREF cws AS DWSTR)
-'    DECLARE CONSTRUCTOR (BYVAL n AS LONGINT)
-'    DECLARE CONSTRUCTOR (BYVAL n AS DOUBLE)
-'    DECLARE CONSTRUCTOR (BYREF n AS init_size)
-    DECLARE CONSTRUCTOR (BYVAL n AS ULONGINT)
+    DECLARE CONSTRUCTOR (BYVAL n AS ULONG)
 
     DECLARE DESTRUCTOR
 
@@ -91,6 +83,7 @@ TYPE DWSTR extends wstring
     DECLARE OPERATOR &= (BYVAL n AS LONGINT)
     DECLARE OPERATOR &= (BYVAL n AS DOUBLE)
 END TYPE
+
 
 ''***********************************************************************************************
 '' DWSTR constructors
@@ -127,29 +120,7 @@ PRIVATE CONSTRUCTOR DWSTR (BYREF cws AS DWSTR)
   END IF
 END CONSTRUCTOR
 
-
-'PRIVATE CONSTRUCTOR DWSTR (BYVAL n AS LONGINT)
-'  DIM wsz AS WSTRING * 260 = .WSTR(n)
-'  this.Add(wsz)
-'END CONSTRUCTOR
-'
-'
-'PRIVATE CONSTRUCTOR DWSTR (BYVAL n AS DOUBLE)
-'  DIM wsz AS WSTRING * 260 = .WSTR(n)
-'  this.Add(wsz)
-'END CONSTRUCTOR
-'
-'
-'PRIVATE CONSTRUCTOR DWSTR (s as init_size)
-'  if s.n >= 0 then
-'     this.ResizeBuffer(s.n * UCHAR_SIZE)              ''Create the initial buffer, n chars
-'
-'  else                                                ''n < 0, don´t construct, need this for RTL functions
-'  end if  
-'END CONSTRUCTOR
-
-
-PRIVATE CONSTRUCTOR DWSTR (BYVAL n AS ULONGINT)
+PRIVATE CONSTRUCTOR DWSTR (BYVAL n AS ULONG)
   if n > 0 then
      this.ResizeBuffer(n * UCHAR_SIZE)                ''Create the initial buffer, n chars
 
@@ -173,25 +144,88 @@ END DESTRUCTOR
 '' operators
 ''***********************************************************************************************
 
-PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, i as integer = 1, n as integer = -1) AS DWSTR
-'PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR) AS DWSTR
-dim u as dwstr
+PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, byval i as integer = 1, byval n as integer = -1) AS DWSTR
+dim ret as FB_USTRING.DWSTR = 0
+dim x   as integer
 
-  u = "asdf" + wstr(i) + "n: " + wstr(n)
+outputdebugstringa("mid function " + str(n))
 
+  if n < 0 then
+    n = cws.u_len - i + 1
+  end if
 
-  OPERATOR = u
+  x = n * sizeof(wstring)
+
+  if x > cws.u_len then
+    x = cws.u_len - (i - 1) * sizeof(wstring)
+  end if
+
+  ret.u_data = Allocate(x + 4)                        '' + 4 = make room for the null terminator.
+
+  IF ret.u_data THEN
+    fb_hStrCopy(byval ret.u_data, byval cws.u_data + (i - 1) * sizeof(wstring), x)
+  else
+    err = 4
+    operator = ret
+    exit operator
+  END IF
+
+  ret.u_len = x
+
+  poke long, ret.u_data + x, 0                        'add 4 nulls (covers all possible WSTRING sizes
+  operator = ret
 END OPERATOR
 
-PRIVATE OPERATOR MID overload (BYREF u AS DWSTR, i as integer, n as integer, BYREF cws AS DWSTR) as long
-'PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR) AS DWSTR
-'dim u as dwstr
+PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, byval i as integer, byval n as integer, BYREF u AS DWSTR) as long
+'PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, i as integer, n as integer, BYREF u AS DWSTR) as long
+dim x   as integer
 
-  u = "xyz" + wstr(i) + "n: " + wstr(n)
+'  cws = "asdf"
+
+outputdebugstringa("mid assign")
+  if n <= 0 then
+    x = u.u_len
+
+  else
+    x = n * sizeof(wstring)
+  end if
 
 
-  OPERATOR = 1'u
+  if x > cws.u_len then
+    x = cws.u_len - (i - 1) * sizeof(wstring)
+  end if
+
+outputdebugstringa(str(x))
+
+  fb_hStrCopy(byval cws.u_data + (i - 1) * sizeof(wstring), byval u.u_data, x-1) 'leave last byte -> gets set to 0 by fb_hStrCopy
+  poke byte, cws.u_data + (i - 1) * sizeof(wstring) + x - 1, u.u_data[x - 1] 'copy last byte
+
+  OPERATOR = 1
 END OPERATOR
+
+'PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, byval i as integer, byval n as integer, BYREF u AS wstring) as long
+''PRIVATE OPERATOR MID overload (BYREF cws AS DWSTR, i as integer, n as integer, BYREF u AS DWSTR) as long
+'dim x   as integer
+'
+'  cws = "asdf"
+'
+'outputdebugstringa("mid assign")
+''  if n <= 0 then
+''    n = u.u_len
+''  end if
+''
+''  x = n * sizeof(wstring)
+''
+''  if x > cws.u_len then
+''    x = cws.u_len - (i - 1) * sizeof(wstring)
+''  end if
+''
+''outputdebugstringa(str(x))
+''  fb_hStrCopy(byval cws.u_data + (i - 1) * sizeof(wstring), byval cws.u_data, x)
+'
+'  OPERATOR = 1
+'END OPERATOR
+
 
 PRIVATE OPERATOR LEN (BYREF cws AS DWSTR) AS ulong    ''returns the length, in characters, of the DWSTR.
   OPERATOR = cws.u_len \ UCHAR_SIZE
@@ -505,11 +539,6 @@ DIM cwsRes AS FB_USTRING.DWSTR = cws1
   OPERATOR = cwsRes
 END OPERATOR
 
-
-'***********************************************************************************************
-' this doesn´t work, because only the last operator defined takes effect !!!
-'***********************************************************************************************
-
 PRIVATE OPERATOR & overload (BYREF cws1 AS FB_USTRING.DWSTR, BYVAL n AS LONGINT) AS FB_USTRING.DWSTR
 DIM cwsRes AS FB_USTRING.DWSTR = cws1
 DIM wsz AS WSTRING * 260 = .WSTR(n)
@@ -537,9 +566,6 @@ END OPERATOR
 
 
 PRIVATE FUNCTION Left OVERLOAD (BYREF cws AS FB_USTRING.DWSTR, BYVAL nChars AS INTEGER) AS FB_USTRING.DWSTR
-'dim s   as FB_USTRING.init_size
-'  s.n = -1
-'dim ret as FB_USTRING.DWSTR = s
 dim ret as FB_USTRING.DWSTR = 0
 dim n   as integer
 
@@ -566,9 +592,6 @@ dim n   as integer
 END FUNCTION
 
 PRIVATE FUNCTION Right OVERLOAD (BYREF cws AS FB_USTRING.DWSTR, BYVAL nChars AS INTEGER) AS FB_USTRING.DWSTR
-'dim s   as FB_USTRING.init_size
-'  s.n = -1
-'dim ret as FB_USTRING.DWSTR = s
 dim ret as FB_USTRING.DWSTR = 0
 dim n   as integer
 

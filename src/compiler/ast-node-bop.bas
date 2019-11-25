@@ -605,7 +605,6 @@ end function
 		if( proc <> NULL ) then
 			'' build a proc call
 
-ods("use overload")            
 			return astBuildCall( proc, l, r )
 		else
 			if( err_num <> FB_ERRMSG_OK ) then
@@ -738,8 +737,6 @@ function astNewBOP _
 	function = NULL
 
 	'' check op overloading
-ods("& overload check")
-ods(str(op))
 	hDoGlobOpOverload( op, l, r )
 
 	is_str = FALSE
