@@ -1144,13 +1144,13 @@ private function hReadMacroText _
                 end select                        
 
             '' check suffix
-            case CHAR_PERC
+            case CHAR_PERC                            '%
     			lexSkipToken( LEX_FLAGS )
     			lexSkipToken( LEX_FLAGS )
                 makecount = true
 '                concatenate = true
 
-            case CHAR_QUESTION
+            case CHAR_QUESTION                        '?
     			lexSkipToken( LEX_FLAGS )
     			lexSkipToken( LEX_FLAGS )
                 checkprefix = true
@@ -1169,7 +1169,7 @@ private function hReadMacroText _
                     continue do
                 end select                        
 
-            case CHAR_AMP                             'concatenate ?
+            case CHAR_AMP                             '& concatenate ?
                 select case lexGetLookAhead( 2, (LEX_FLAGS or LEXCHECK_KWDNAMESPC) and _
                                                 (not LEXCHECK_NOWHITESPC) )
                 case CHAR_SHARP                       '### ?
